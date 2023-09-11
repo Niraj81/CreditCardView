@@ -6,6 +6,9 @@ import android.util.Log
 import android.view.WindowInsetsAnimation.Bounds
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -34,6 +37,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CornerSize
@@ -47,6 +51,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -75,6 +80,8 @@ import androidx.constraintlayout.compose.MotionScene
 import androidx.constraintlayout.compose.Transition
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.niraj.creditcardview.UIComponents.SingleTransaction
+import com.niraj.creditcardview.UIComponents.Transactions
 import com.niraj.creditcardview.data.Balance
 import com.niraj.creditcardview.data.Card
 import com.niraj.creditcardview.data.Cost
@@ -93,29 +100,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = Color.White
                 ) {
-                    CardRow(modifier = Modifier, swipeProgress = 1f, scale = 1f)
-//                    Column (
-//                        horizontalAlignment = Alignment.CenterHorizontally,
-//                        verticalArrangement = Arrangement.Center
-//                    ){
-//                        var stateSet by remember {
-//                            mutableStateOf(StateSet(1, 0, StateSet.Animation(key = "10")))
-//                        }
-//                        Button(
-//                            onClick = {
-//                                val start = ((stateSet.startState as Int) + 1) % 2
-//                                val end = ((stateSet.endState as Int) + 1) % 2
-//                                stateSet = StateSet(
-//                                    startState = start,
-//                                    endState = end,
-//                                    StateSet.Animation(key = "${start}${end}")
-//                                )
-//                            }
-//                        ) {
-//                            Text("Animate")
-//                        }
-//                        HomeScreen(stateSet)
-//                    }
+//                    CardRow(modifier = Modifier, swipeProgress = 1f, scale = 1f)
+                    HomeScreen()
                 }
             }
         }
@@ -143,176 +129,67 @@ class MainActivity : ComponentActivity() {
 // Main screen where I want to add all the animations using MutliStateMotionLayout and stuff
 @OptIn(ExperimentalMotionApi::class)
 @Composable
-fun HomeScreen(stateSet: StateSet) {
+fun HomeScreen() {
     val viewModel : CreditViewModel = viewModel()
     val credData by viewModel.CreditInfo.collectAsState()
 
     val cardState = ConstraintSet {
-
+        val cardPager = createRefFor("cardPager")
+        val transactionDetails = createRefFor("transactionDetails")
+        constrain(transactionDetails) {
+            top.linkTo(cardPager.bottom)
+        }
     }
     val halfExpandedState = ConstraintSet {
-
+        val cardPager = createRefFor("cardPager")
+        val transactionDetails = createRefFor("transactionDetails")
+        constrain(transactionDetails) {
+            top.linkTo(cardPager.bottom)
+        }
     }
     val fullyExpandedState = ConstraintSet {
-
+        val cardPager = createRefFor("cardPager")
+        constrain(cardPager) {
+            top.linkTo(parent.top, 15.dp)
+            start.linkTo(parent.start, 15.dp)
+        }
     }
 
-    val currentProgress by remember { mutableStateOf(0f)}
-
+    var currentProgress by remember { mutableStateOf(0f)}
+    val animProgress by animateFloatAsState(
+        targetValue = currentProgress,
+        animationSpec = TweenSpec(
+            durationMillis = 100,
+            easing = LinearEasing
+        ), label = ""
+    )
     MotionLayout(
         start = cardState,
         end = halfExpandedState,
-        progress = currentProgress
+        progress = animProgress
     ) {
-        CardRow(modifier = Modifier.layoutId("credit_cards"), swipeProgress = 1f, scale = 1f)
+        CardRow(
+            modifier = Modifier,
+            dragProgress = {
+                currentProgress = it
+            }
+        )
         Transactions(transactions = if(credData.cards.size > 0) credData.cards[0].transactions else emptyList())
     }
-
-//    MultiStateMotionLayout(
-//        modifier = Modifier.fillMaxSize(),
-//        stateSet = stateSet,
-//        stateConstraints = mapOf(
-//            0 to ConstraintSet {
-//                val transactions = createRefFor("transactions")
-//                val creditCards = createRefFor("credit_cards")
-//                constrain(transactions) {
-//                    top.linkTo(creditCards.bottom)
-//                }
-//
-//            },
-//            1 to ConstraintSet {
-//                val creditCards = createRefFor("credit_cards")
-//                val transactions = createRefFor("transactions")
-//
-//                constrain(transactions) {
-//                    top.linkTo(creditCards.bottom)
-//                }
-//            }
-//        )
-//    ) {
-//        CardRow(modifier = Modifier.layoutId("credit_cards"), swipeProgress = 1f, scale = 1f)
-//        Transactions(transactions = if(credData.cards.size > 0) credData.cards[0].transactions else emptyList())
-//    }
 }
-
-@Preview
-@Composable
-fun CardName(cardName: String = "American Express Platinum") {
-    Text(
-        text = cardName,
-        style = MaterialTheme.typography.headlineMedium,
-        fontWeight = FontWeight.Black,
-        color = Color.DarkGray
-    )
-}
-
-@Composable
-fun Transactions(transactions: List<Transaction> = emptyList()) {
-    Surface (
-        color = Color(242, 240, 244),
-        modifier = Modifier.layoutId("transactions")
-    ) {
-        LazyColumn() {
-            items(transactions.size) {
-                SingleTransaction(transactions[it])
-            }
-        }
-    }
-}
-
-@Preview
-@Composable
-fun SingleTransaction(transaction: Transaction = Transaction("Food", Cost(2.99, "$"), "Chai Days")) {
-    Row(
-        modifier = Modifier.padding(top = 10.dp, bottom = 7.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column (
-            horizontalAlignment = Alignment.Start
-        ) {
-            Text(
-                text = transaction.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Black,
-                color = Color.Gray
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = transaction.category,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color.Gray
-            )
-        }
-        Spacer(Modifier.weight(0.1f))
-        Text(
-            text = "${transaction.cost.currency}${transaction.cost.amount}",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Black,
-            color = Color(0xFF646464),
-
-        )
-    }
-}
-
-@Preview
-@Composable
-fun TopBar(avatar: String = "https://i.pravatar.cc/300") {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = "My Cards",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Black,
-            modifier = Modifier.weight(5f),
-            color = Color.DarkGray
-        )
-        AsyncImage(
-            model = avatar,
-            contentDescription = "User Avatar",
-            modifier = Modifier
-                .weight(0.7f)
-                .clip(CircleShape)
-        )
-    }
-}
-
-@Preview
-@Composable
-fun BalanceView(balance: Balance = Balance(12000.0, "$")) {
-    Column (
-        horizontalAlignment = Alignment.Start
-    ) {
-        Text(
-            text = "Balance",
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = "${balance.currency}${balance.amount}",
-            style = MaterialTheme.typography.displaySmall,
-            color = Color.Gray,
-            fontWeight = FontWeight.Black
-        )
-    }
-}
-
 
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CardRow(
     modifier: Modifier,
-    swipeProgress: Float,
-    scale: Float
+    dragProgress: (Float) -> Unit
 ) {
     var enabledCard by remember { (mutableStateOf(-1)) }
     Box (
-        modifier = Modifier.wrapContentSize()
+        modifier = Modifier
+            .layoutId("cardPager")
+            .wrapContentSize()
             .background(Color.DarkGray),
         contentAlignment = Alignment.Center
     ) {
@@ -327,6 +204,7 @@ fun CardRow(
             if(enabledCard == -1 || enabledCard == i) {
                 CreditCard(
                     Color.Black,
+                    Color.White,
                     onSwipeDone = { progress, ind ->
                         enabledCard = if(progress != 1f) -1
                         else ind
@@ -334,6 +212,7 @@ fun CardRow(
                     onSwipeStarted = {
                         enabledCard = it
                     },
+                    currentProgress = dragProgress,
                     index = i
                 )
             }
@@ -344,14 +223,21 @@ fun CardRow(
 
 //@Preview
 @Composable
-fun CreditCard(color: Color = Color.Cyan, onSwipeDone: (Float, Int) -> Unit, onSwipeStarted : (Int) -> Unit, index : Int ) {
+fun CreditCard(
+    color: Color = Color.Cyan,
+    borderColor: Color = Color.White,
+    onSwipeDone: (Float, Int) -> Unit,
+    onSwipeStarted : (Int) -> Unit,
+    currentProgress: (Float) -> Unit,
+    index: Int,
+) {
 
     var dragDistance by remember { mutableStateOf(0f) }
-    val progress by animateFloatAsState(targetValue = dragDistance/-400f)
+    val progress by remember { derivedStateOf { dragDistance/-400f }}
     val rotation by animateFloatAsState(
         targetValue = progress * 90f,
         label = "",
-        animationSpec = TweenSpec (durationMillis = 200)
+        animationSpec = TweenSpec (durationMillis = 150, easing = FastOutLinearInEasing)
     )
 
 
@@ -368,13 +254,14 @@ fun CreditCard(color: Color = Color.Cyan, onSwipeDone: (Float, Int) -> Unit, onS
                         if (dragDistance < -200)
                             dragDistance = -400f
                         else dragDistance = 0f
-                        onSwipeDone(dragDistance / -400f, index)
+                        onSwipeDone(progress, index)
                     }
                 ) { change, dragAmount ->
                     change.consume()
                     dragDistance += dragAmount
                     if (dragDistance > 0f) dragDistance = 0f
                     else if (dragDistance < -400f) dragDistance = -400f
+                    currentProgress(progress)
                 }
             }
     ) {
@@ -383,11 +270,10 @@ fun CreditCard(color: Color = Color.Cyan, onSwipeDone: (Float, Int) -> Unit, onS
                 .rotate(rotation)
                 .fillMaxHeight(0.43f + (1 - progress) * 0.20f)
                 .fillMaxWidth(0.60f + (1 - progress) * 0.23f),
-            border = BorderStroke(3.dp, Color.White),
+            border = BorderStroke(3.dp, borderColor),
             shape = RoundedCornerShape(29.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(248, 195, 63))
+            colors = CardDefaults.cardColors(containerColor = color)
         ) {
-
         }
     }
 }
