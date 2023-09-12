@@ -9,6 +9,7 @@ import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -24,6 +25,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -49,8 +51,10 @@ import androidx.constraintlayout.compose.Visibility
 import androidx.core.graphics.toColorInt
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.size.Size
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.niraj.creditcardview.UIComponents.BalanceView
 import com.niraj.creditcardview.UIComponents.CardName
+import com.niraj.creditcardview.UIComponents.CardRow
 import com.niraj.creditcardview.UIComponents.CreditCard
 import com.niraj.creditcardview.UIComponents.TopBar
 import com.niraj.creditcardview.UIComponents.Transactions
@@ -97,12 +101,8 @@ fun HomeScreen() {
     var viewState = remember {
         mutableStateOf(ViewState.CardState)
     }
-    val selectdCardName by remember {
-        derivedStateOf {
-            if (selectedCard == -1) "Nothing"
-            else credData.cards[selectedCard].name
-        }
-    }
+    var selectedCardName by remember { mutableStateOf("Nothing") }
+
     val maxDrag = -400f
     var dragDistance by remember {
         mutableStateOf(0f)
@@ -116,6 +116,7 @@ fun HomeScreen() {
     fun onDragStarted(cardNo : Int) {
         selectedCard = cardNo
         viewModel.transactions = credData.cards[selectedCard].transactions
+        selectedCardName = credData.cards[selectedCard].name
     }
     fun onDrag(dragAmount: Float) {
         dragDistance += dragAmount
@@ -254,9 +255,10 @@ fun HomeScreen() {
             visibility = Visibility.Invisible
         }
         constrain(cardPager) {
-            top.linkTo(parent.top, defaultMargin)
+            top.linkTo(cardName.top)
             start.linkTo(parent.absoluteLeft)
             end.linkTo(cardName.start)
+            bottom.linkTo(cardName.bottom)
             width = Dimension.percent(0.25f)
             height = Dimension.ratio("43:27")
         }
@@ -264,6 +266,7 @@ fun HomeScreen() {
             top.linkTo(parent.top, defaultMargin)
             start.linkTo(cardPager.end)
             end.linkTo(parent.absoluteRight)
+            bottom.linkTo(transactionDetails.top,defaultMargin)
             width = Dimension.fillToConstraints
         }
         constrain(transactionDetails) {
@@ -289,20 +292,11 @@ fun HomeScreen() {
             }
         }
     }
-
-//    val animProgress by animateFloatAsState(
-//        targetValue = if(progress <= 1) progress else progress - 1 ,
-//        label = "",
-//        animationSpec = TweenSpec (
-//            durationMillis = 100
-//        )
-//    )
     val animProgress by remember {
         derivedStateOf {
             if(progress <= 1) progress else progress - 1
         }
     }
-
     if(credData.cards.isNotEmpty()) {
         MotionLayout(
             start = startState,
@@ -331,7 +325,7 @@ fun HomeScreen() {
             )
             CardName(
                 modifier = Modifier.layoutId("cardName"),
-                cardName = selectdCardName
+                cardName = selectedCardName
             )
             BalanceView(
                 modifier = Modifier.layoutId("balance"),
@@ -340,56 +334,10 @@ fun HomeScreen() {
             Transactions(
                 modifier = Modifier.layoutId("transactionDetails"),
                 viewState = viewState,
-                progress = progress,
                 transactions = transactionList,
                 onDrag = {onDrag(it)},
                 onDragEnded = { onDragEnded() }
             )
-        }
-    }
-
-}
-
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun CardRow(
-    modifier: Modifier,
-    selectedCard: Int,
-    progress: Float,
-    viewState: ViewState,
-    cards: List<Card>,
-    onDragStarted: (Int) -> Unit,
-    onDrag: (Float) -> Unit,
-    onDragEnded : () -> Unit
-) {
-    Box (
-        modifier = modifier
-//            .background(Color.DarkGray),
-        ,
-        contentAlignment = Alignment.Center
-    ) {
-        HorizontalPager(
-            userScrollEnabled = viewState == ViewState.CardState,
-            modifier = modifier
-                .fillMaxSize()
-//                .background(Color.Yellow)
-                .padding(vertical = 0.dp),
-            pageCount = cards.size,
-            contentPadding = PaddingValues(horizontal = 0.dp)
-        ) {i ->
-
-                CreditCard(
-                    Color(cards[i].colour.toColorInt()),
-                    Color.White,
-                    progress = progress,
-                    onDragStarted = onDragStarted,
-                    onDrag = onDrag,
-                    onDragEnded = onDragEnded,
-                    index = i,
-                    alpha = if (selectedCard == -1 || selectedCard == i) 1f else 0f
-                )
-
         }
     }
 }

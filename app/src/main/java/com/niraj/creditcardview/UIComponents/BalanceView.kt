@@ -31,7 +31,7 @@ fun BalanceView(
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
-            text = "$${balance.amount}",
+            text = "${currencyToSymbol(balance.currency)}${balance.amount}",
             color = Color.Gray,
             fontWeight = FontWeight.Black,
             fontSize = 27.sp
