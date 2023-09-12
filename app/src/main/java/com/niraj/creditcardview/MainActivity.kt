@@ -3,6 +3,7 @@ package com.niraj.creditcardview
 import android.graphics.Paint.Align
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.view.WindowInsetsAnimation.Bounds
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -86,9 +87,12 @@ import com.niraj.creditcardview.data.Balance
 import com.niraj.creditcardview.data.Card
 import com.niraj.creditcardview.data.Cost
 import com.niraj.creditcardview.data.Transaction
+import com.niraj.creditcardview.data.ViewState
 import com.niraj.creditcardview.ui.theme.CreditCardViewTheme
 import com.niraj.creditcardview.viewModel.CreditViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import java.lang.Float.max
+import java.lang.Float.min
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -133,6 +137,46 @@ fun HomeScreen() {
     val viewModel : CreditViewModel = viewModel()
     val credData by viewModel.CreditInfo.collectAsState()
 
+    val maxDrag = -400f
+    var viewState by remember {
+        mutableStateOf(ViewState.CardState)
+    }
+    var dragDistance by remember {
+        mutableStateOf(0f)
+    }
+
+    val progress by remember {
+        derivedStateOf {
+            dragDistance/maxDrag
+        }
+    }
+
+    val animProgress by animateFloatAsState(
+        targetValue = progress
+    )
+
+    fun dragEnded() {
+        dragDistance = if(dragDistance > maxDrag/2) {
+            0f
+        } else if(dragDistance > 3*(maxDrag/2)) {
+            -400f
+        } else {
+            -800f
+        }
+        viewState = if(progress == 0f) {
+            ViewState.CardState
+        } else if(progress == 1f) {
+            ViewState.ExpandedState
+        } else {
+            ViewState.FullyExpandedState
+        }
+    }
+    fun onDrag(dragAmount: Float) {
+        dragDistance += dragAmount
+        dragDistance = min(0f, dragAmount)
+        dragDistance = max(maxDrag*2, dragAmount)
+    }
+
     val cardState = ConstraintSet {
         val cardPager = createRefFor("cardPager")
         val transactionDetails = createRefFor("transactionDetails")
@@ -156,13 +200,13 @@ fun HomeScreen() {
     }
 
     var currentProgress by remember { mutableStateOf(0f)}
-    val animProgress by animateFloatAsState(
-        targetValue = currentProgress,
-        animationSpec = TweenSpec(
-            durationMillis = 100,
-            easing = LinearEasing
-        ), label = ""
-    )
+//    val animProgress by animateFloatAsState(
+//        targetValue = currentProgress,
+//        animationSpec = TweenSpec(
+//            durationMillis = 100,
+//            easing = LinearEasing
+//        ), label = ""
+//    )
     MotionLayout(
         start = cardState,
         end = halfExpandedState,
@@ -239,6 +283,7 @@ fun CreditCard(
         label = "",
         animationSpec = TweenSpec (durationMillis = 150, easing = FastOutLinearInEasing)
     )
+    val maxDrag = -400f
 
 
     // Takes care of the input (only Vertical) - Horizontal is taken care by horizontal pager
@@ -251,8 +296,8 @@ fun CreditCard(
                         onSwipeStarted(index)
                     },
                     onDragEnd = {
-                        if (dragDistance < -200)
-                            dragDistance = -400f
+                        if (dragDistance < maxDrag/2)
+                            dragDistance = maxDrag
                         else dragDistance = 0f
                         onSwipeDone(progress, index)
                     }
@@ -260,7 +305,7 @@ fun CreditCard(
                     change.consume()
                     dragDistance += dragAmount
                     if (dragDistance > 0f) dragDistance = 0f
-                    else if (dragDistance < -400f) dragDistance = -400f
+                    else if (dragDistance < maxDrag) dragDistance = maxDrag
                     currentProgress(progress)
                 }
             }
