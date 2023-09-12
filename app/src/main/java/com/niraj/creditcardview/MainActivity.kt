@@ -1,98 +1,72 @@
 package com.niraj.creditcardview
 
-import android.graphics.Paint.Align
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.view.WindowInsetsAnimation.Bounds
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.TweenSpec
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredHeight
-import androidx.compose.foundation.layout.requiredWidth
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CornerSize
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ScaleFactor
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.layoutId
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.times
 import androidx.constraintlayout.compose.ConstraintSet
+import androidx.constraintlayout.compose.Dimension
 import androidx.constraintlayout.compose.ExperimentalMotionApi
 import androidx.constraintlayout.compose.MotionLayout
-import androidx.constraintlayout.compose.MotionScene
-import androidx.constraintlayout.compose.Transition
+import androidx.constraintlayout.compose.Visibility
+import androidx.core.graphics.toColorInt
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import com.niraj.creditcardview.UIComponents.SingleTransaction
+import coil.size.Size
+import com.niraj.creditcardview.UIComponents.BalanceView
+import com.niraj.creditcardview.UIComponents.CardName
+import com.niraj.creditcardview.UIComponents.CreditCard
+import com.niraj.creditcardview.UIComponents.TopBar
 import com.niraj.creditcardview.UIComponents.Transactions
 import com.niraj.creditcardview.data.Balance
 import com.niraj.creditcardview.data.Card
-import com.niraj.creditcardview.data.Cost
 import com.niraj.creditcardview.data.Transaction
 import com.niraj.creditcardview.data.ViewState
 import com.niraj.creditcardview.ui.theme.CreditCardViewTheme
 import com.niraj.creditcardview.viewModel.CreditViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import java.lang.Float.max
 import java.lang.Float.min
+import kotlin.contracts.contract
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -104,7 +78,6 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = Color.White
                 ) {
-//                    CardRow(modifier = Modifier, swipeProgress = 1f, scale = 1f)
                     HomeScreen()
                 }
             }
@@ -112,114 +85,269 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Normal preview composable for looking at all the composables
-//@Composable
-//fun HomeScreen() {
-//    val viewModel : CreditViewModel = viewModel()
-//    val credData by viewModel.CreditInfo.collectAsState()
-//    Column (
-//        modifier = Modifier.background(Color(241, 241, 243)).padding(horizontal = 20.dp)
-//    ) {
-//        TopBar(credData.avatar)
-//        BalanceView(credData.balance)
-//        CardName("American Express Platinum")
-//        if(credData.cards.isNotEmpty()) {
-//            Transactions(transactions = credData.cards[0].transactions)
-//        }
-//    }
-//}
-
-
 // Main screen where I want to add all the animations using MutliStateMotionLayout and stuff
 @OptIn(ExperimentalMotionApi::class)
 @Composable
 fun HomeScreen() {
     val viewModel : CreditViewModel = viewModel()
     val credData by viewModel.CreditInfo.collectAsState()
-
-    val maxDrag = -400f
-    var viewState by remember {
+    var selectedCard by remember { mutableStateOf(-1) }
+    val transactionList = viewModel.transactions
+    val cards = credData.cards
+    var viewState = remember {
         mutableStateOf(ViewState.CardState)
     }
+    val selectdCardName by remember {
+        derivedStateOf {
+            if (selectedCard == -1) "Nothing"
+            else credData.cards[selectedCard].name
+        }
+    }
+    val maxDrag = -400f
     var dragDistance by remember {
         mutableStateOf(0f)
     }
-
     val progress by remember {
         derivedStateOf {
-            dragDistance/maxDrag
+            (dragDistance/maxDrag)
         }
     }
 
-    val animProgress by animateFloatAsState(
-        targetValue = progress
-    )
-
-    fun dragEnded() {
-        dragDistance = if(dragDistance > maxDrag/2) {
-            0f
-        } else if(dragDistance > 3*(maxDrag/2)) {
-            -400f
-        } else {
-            -800f
-        }
-        viewState = if(progress == 0f) {
-            ViewState.CardState
-        } else if(progress == 1f) {
-            ViewState.ExpandedState
-        } else {
-            ViewState.FullyExpandedState
-        }
+    fun onDragStarted(cardNo : Int) {
+        selectedCard = cardNo
+        viewModel.transactions = credData.cards[selectedCard].transactions
     }
     fun onDrag(dragAmount: Float) {
         dragDistance += dragAmount
-        dragDistance = min(0f, dragAmount)
-        dragDistance = max(maxDrag*2, dragAmount)
+        if(viewState.value == ViewState.CardState) {
+            dragDistance = min(0f, dragDistance)
+            dragDistance = max(maxDrag, dragDistance)
+        } else if(viewState.value == ViewState.ExpandedState) {
+            dragDistance = min(0f, dragDistance)
+            dragDistance = max(2*maxDrag, dragDistance)
+        } else {
+            dragDistance = min(maxDrag, dragDistance)
+            dragDistance = max(2*maxDrag, dragDistance)
+        }
     }
+    fun onDragEnded() {
+        when(viewState.value) {
+            ViewState.CardState -> {
+                dragDistance = if(dragDistance > maxDrag/2) {
+                    0f
+                } else {
+                    maxDrag
+                }
+            }
+            ViewState.ExpandedState -> {
+                dragDistance = if(dragDistance > maxDrag/2) {
+                    0f
+                } else if(dragDistance > 3*(maxDrag/2)) {
+                    maxDrag
+                } else {
+                    2*maxDrag
+                }
+            }
+            ViewState.FullyExpandedState -> {
+                dragDistance = if(dragDistance < 3*(maxDrag/2)) {
+                    -800f
+                } else {
+                    -400f
+                }
+            }
+        }
 
+        viewState.value = when (progress) {
+            0f -> {
+                ViewState.CardState
+            }
+            1f -> {
+                ViewState.ExpandedState
+            }
+            else -> {
+                ViewState.FullyExpandedState
+            }
+        }
+        if(viewState.value == ViewState.CardState) {
+            selectedCard = -1
+        }
+
+    }
+    val defaultMargin = 20.dp
     val cardState = ConstraintSet {
         val cardPager = createRefFor("cardPager")
         val transactionDetails = createRefFor("transactionDetails")
+        val topBar = createRefFor("topBar")
+        val cardName = createRefFor("cardName")
+        val balance = createRefFor("balance")
+
+         constrain(topBar) {
+             top.linkTo(parent.top, defaultMargin)
+         }
+        constrain(cardName) {
+            top.linkTo(parent.top, defaultMargin)
+            start.linkTo(parent.absoluteLeft, defaultMargin)
+            width = Dimension.percent(0.7f)
+            visibility = Visibility.Invisible
+        }
+        constrain(balance) {
+            top.linkTo(topBar.bottom, defaultMargin)
+            absoluteLeft.linkTo(parent.absoluteLeft)
+        }
         constrain(transactionDetails) {
-            top.linkTo(cardPager.bottom)
+            top.linkTo(parent.bottom)
+        }
+        constrain(cardPager) {
+            top.linkTo(balance.bottom, defaultMargin)
+            bottom.linkTo(parent.bottom, defaultMargin)
+            absoluteLeft.linkTo(parent.absoluteLeft)
+            absoluteRight.linkTo(parent.absoluteRight)
+            width = Dimension.fillToConstraints
+            height = Dimension.ratio("27:43")
         }
     }
     val halfExpandedState = ConstraintSet {
         val cardPager = createRefFor("cardPager")
         val transactionDetails = createRefFor("transactionDetails")
+        val topBar = createRefFor("topBar")
+        val cardName = createRefFor("cardName")
+        val balance = createRefFor("balance")
+
+        constrain(topBar) {
+            bottom.linkTo(parent.top)
+        }
+        constrain(cardName) {
+            top.linkTo(parent.top, defaultMargin)
+            start.linkTo(parent.absoluteLeft, defaultMargin)
+            width = Dimension.percent(0.7f)
+            visibility = Visibility.Visible
+        }
+        constrain(balance) {
+            visibility = Visibility.Invisible
+        }
+        constrain(cardPager) {
+            top.linkTo(cardName.bottom, defaultMargin)
+            absoluteLeft.linkTo(parent.absoluteLeft)
+            absoluteRight.linkTo(parent.absoluteRight)
+            width = Dimension.percent(1f)
+            height = Dimension.value(300.dp)
+        }
         constrain(transactionDetails) {
             top.linkTo(cardPager.bottom)
         }
     }
     val fullyExpandedState = ConstraintSet {
         val cardPager = createRefFor("cardPager")
+        val transactionDetails = createRefFor("transactionDetails")
+        val topBar = createRefFor("topBar")
+        val cardName = createRefFor("cardName")
+        val balance = createRefFor("balance")
+        val card = createRefFor("card")
+        constrain(topBar) {
+            bottom.linkTo(parent.top)
+        }
+        constrain(card) {
+            height = Dimension.value(60.dp)
+            width = Dimension.value(60.dp)
+        }
+        constrain(balance) {
+            visibility = Visibility.Invisible
+        }
         constrain(cardPager) {
-            top.linkTo(parent.top, 15.dp)
-            start.linkTo(parent.start, 15.dp)
+            top.linkTo(parent.top, defaultMargin)
+            start.linkTo(parent.absoluteLeft)
+            end.linkTo(cardName.start)
+            width = Dimension.percent(0.25f)
+            height = Dimension.ratio("43:27")
+        }
+        constrain(cardName) {
+            top.linkTo(parent.top, defaultMargin)
+            start.linkTo(cardPager.end)
+            end.linkTo(parent.absoluteRight)
+            width = Dimension.fillToConstraints
+        }
+        constrain(transactionDetails) {
+            top.linkTo(cardName.bottom, defaultMargin)
         }
     }
 
-    var currentProgress by remember { mutableStateOf(0f)}
-//    val animProgress by animateFloatAsState(
-//        targetValue = currentProgress,
-//        animationSpec = TweenSpec(
-//            durationMillis = 100,
-//            easing = LinearEasing
-//        ), label = ""
-//    )
-    MotionLayout(
-        start = cardState,
-        end = halfExpandedState,
-        progress = animProgress
-    ) {
-        CardRow(
-            modifier = Modifier,
-            dragProgress = {
-                currentProgress = it
+    val startState by remember {
+        derivedStateOf {
+            if(progress <= 1) {
+                cardState
+            } else {
+                halfExpandedState
             }
-        )
-        Transactions(transactions = if(credData.cards.size > 0) credData.cards[0].transactions else emptyList())
+        }
     }
+    val endState by remember {
+        derivedStateOf {
+            if(progress <= 1) {
+                halfExpandedState
+            } else {
+                fullyExpandedState
+            }
+        }
+    }
+
+//    val animProgress by animateFloatAsState(
+//        targetValue = if(progress <= 1) progress else progress - 1 ,
+//        label = "",
+//        animationSpec = TweenSpec (
+//            durationMillis = 100
+//        )
+//    )
+    val animProgress by remember {
+        derivedStateOf {
+            if(progress <= 1) progress else progress - 1
+        }
+    }
+
+    if(credData.cards.isNotEmpty()) {
+        MotionLayout(
+            start = startState,
+            end = endState,
+            progress = animProgress
+        ) {
+            CardRow(
+                modifier = Modifier.layoutId("cardPager"),
+                selectedCard = selectedCard,
+                progress = progress,
+                viewState = viewState.value,
+                cards = cards,
+                onDragStarted = {
+                    onDragStarted(it)
+                },
+                onDrag = {
+                    if(viewState.value != ViewState.FullyExpandedState) onDrag(it)
+                },
+                onDragEnded = {
+                    onDragEnded()
+                }
+            )
+            TopBar(
+                Modifier.layoutId("topBar"),
+                credData.avatar
+            )
+            CardName(
+                modifier = Modifier.layoutId("cardName"),
+                cardName = selectdCardName
+            )
+            BalanceView(
+                modifier = Modifier.layoutId("balance"),
+                balance = credData.balance
+            )
+            Transactions(
+                modifier = Modifier.layoutId("transactionDetails"),
+                viewState = viewState,
+                progress = progress,
+                transactions = transactionList,
+                onDrag = {onDrag(it)},
+                onDragEnded = { onDragEnded() }
+            )
+        }
+    }
+
 }
 
 
@@ -227,98 +355,41 @@ fun HomeScreen() {
 @Composable
 fun CardRow(
     modifier: Modifier,
-    dragProgress: (Float) -> Unit
+    selectedCard: Int,
+    progress: Float,
+    viewState: ViewState,
+    cards: List<Card>,
+    onDragStarted: (Int) -> Unit,
+    onDrag: (Float) -> Unit,
+    onDragEnded : () -> Unit
 ) {
-    var enabledCard by remember { (mutableStateOf(-1)) }
     Box (
-        modifier = Modifier
-            .layoutId("cardPager")
-            .wrapContentSize()
-            .background(Color.DarkGray),
+        modifier = modifier
+//            .background(Color.DarkGray),
+        ,
         contentAlignment = Alignment.Center
     ) {
         HorizontalPager(
+            userScrollEnabled = viewState == ViewState.CardState,
             modifier = modifier
-                .background(Color.LightGray)
-                .wrapContentSize()
-                .padding(vertical = 20.dp),
-            pageCount = 3,
-            contentPadding = PaddingValues(horizontal = 3.dp)
+                .fillMaxSize()
+//                .background(Color.Yellow)
+                .padding(vertical = 0.dp),
+            pageCount = cards.size,
+            contentPadding = PaddingValues(horizontal = 0.dp)
         ) {i ->
-            if(enabledCard == -1 || enabledCard == i) {
+
                 CreditCard(
-                    Color.Black,
+                    Color(cards[i].colour.toColorInt()),
                     Color.White,
-                    onSwipeDone = { progress, ind ->
-                        enabledCard = if(progress != 1f) -1
-                        else ind
-                    },
-                    onSwipeStarted = {
-                        enabledCard = it
-                    },
-                    currentProgress = dragProgress,
-                    index = i
+                    progress = progress,
+                    onDragStarted = onDragStarted,
+                    onDrag = onDrag,
+                    onDragEnded = onDragEnded,
+                    index = i,
+                    alpha = if (selectedCard == -1 || selectedCard == i) 1f else 0f
                 )
-            }
-        }
-    }
-}
 
-
-//@Preview
-@Composable
-fun CreditCard(
-    color: Color = Color.Cyan,
-    borderColor: Color = Color.White,
-    onSwipeDone: (Float, Int) -> Unit,
-    onSwipeStarted : (Int) -> Unit,
-    currentProgress: (Float) -> Unit,
-    index: Int,
-) {
-
-    var dragDistance by remember { mutableStateOf(0f) }
-    val progress by remember { derivedStateOf { dragDistance/-400f }}
-    val rotation by animateFloatAsState(
-        targetValue = progress * 90f,
-        label = "",
-        animationSpec = TweenSpec (durationMillis = 150, easing = FastOutLinearInEasing)
-    )
-    val maxDrag = -400f
-
-
-    // Takes care of the input (only Vertical) - Horizontal is taken care by horizontal pager
-    Box (
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onDragStart = {
-                        onSwipeStarted(index)
-                    },
-                    onDragEnd = {
-                        if (dragDistance < maxDrag/2)
-                            dragDistance = maxDrag
-                        else dragDistance = 0f
-                        onSwipeDone(progress, index)
-                    }
-                ) { change, dragAmount ->
-                    change.consume()
-                    dragDistance += dragAmount
-                    if (dragDistance > 0f) dragDistance = 0f
-                    else if (dragDistance < maxDrag) dragDistance = maxDrag
-                    currentProgress(progress)
-                }
-            }
-    ) {
-        Card (
-            modifier = Modifier
-                .rotate(rotation)
-                .fillMaxHeight(0.43f + (1 - progress) * 0.20f)
-                .fillMaxWidth(0.60f + (1 - progress) * 0.23f),
-            border = BorderStroke(3.dp, borderColor),
-            shape = RoundedCornerShape(29.dp),
-            colors = CardDefaults.cardColors(containerColor = color)
-        ) {
         }
     }
 }

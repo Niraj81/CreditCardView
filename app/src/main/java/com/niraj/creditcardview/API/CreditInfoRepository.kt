@@ -18,7 +18,5 @@ class CreditInfoRepository @Inject constructor(
         if(response.isSuccessful && response.body() != null) {
             _creditInfo.emit(response.body()!!)
         }
-        Log.d("API", creditInfo.toString().length.toString())
-        Log.d("API", _creditInfo.value.balance.toString())
     }
 }
