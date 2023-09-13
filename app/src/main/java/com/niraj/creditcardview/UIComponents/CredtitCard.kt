@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
@@ -52,7 +53,7 @@ fun CreditCard(
     val rotation by animateFloatAsState(
         targetValue = min(1f, progress) * 90f,
         label = "",
-        animationSpec = TweenSpec (durationMillis = 150, easing = FastOutSlowInEasing)
+        animationSpec = TweenSpec (durationMillis = 250, easing = LinearOutSlowInEasing)
     )
 
     // Takes care of the input (only Vertical) - Horizontal is taken care by horizontal pager
