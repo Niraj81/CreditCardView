@@ -62,7 +62,7 @@ val halfExpandedState = ConstraintSet {
         top.linkTo(cardName.bottom, defaultMargin)
         absoluteLeft.linkTo(parent.absoluteLeft)
         absoluteRight.linkTo(parent.absoluteRight)
-        width = Dimension.percent(1f)
+        width = Dimension.fillToConstraints
         height = Dimension.value(300.dp)
     }
     constrain(transactionDetails) {

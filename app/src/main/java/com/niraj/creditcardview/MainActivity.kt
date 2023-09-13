@@ -196,11 +196,24 @@ fun HomeScreen() {
             if(progress <= 1) progress else progress - 1
         }
     }
+    val animProgressA by animateFloatAsState(
+        targetValue = min(1f, progress),
+        animationSpec = TweenSpec(
+            durationMillis = 250
+        )
+    )
+    val animProgressB by animateFloatAsState(
+        targetValue = max(0f, progress - 1),
+        animationSpec = TweenSpec(
+            durationMillis = 250
+        )
+    )
+
     if(credData.cards.isNotEmpty()) {
         MotionLayout(
             start = startState,
             end = endState,
-            progress = animProgress
+            progress = if(startState == cardState) animProgressA else animProgressB
         ) {
             CardRow(
                 modifier = Modifier.layoutId("cardPager"),

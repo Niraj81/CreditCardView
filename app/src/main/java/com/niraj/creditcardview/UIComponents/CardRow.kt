@@ -1,10 +1,12 @@
 package com.niraj.creditcardview.UIComponents
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,13 +33,10 @@ fun CardRow(
         contentAlignment = Alignment.Center
     ) {
         HorizontalPager(
-            userScrollEnabled = viewState == ViewState.CardState,
-            modifier = modifier
-                .fillMaxSize()
-                .padding(vertical = 0.dp),
+            userScrollEnabled = (viewState == ViewState.CardState),
+            modifier = Modifier,
             pageCount = cards.size
         ) {i ->
-
             CreditCard(
                 Color(cards[i].colour.toColorInt()),
                 Color.White,
