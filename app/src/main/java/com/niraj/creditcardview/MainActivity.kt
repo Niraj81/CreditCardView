@@ -172,24 +172,7 @@ fun HomeScreen() {
             selectedCard = -1
         }
     }
-    val startState by remember {
-        derivedStateOf {
-            if(progress <= 1) {
-                cardState
-            } else {
-                halfExpandedState
-            }
-        }
-    }
-    val endState by remember {
-        derivedStateOf {
-            if(progress <= 1) {
-                halfExpandedState
-            } else {
-                fullyExpandedState
-            }
-        }
-    }
+
     val animProgress by remember {
         derivedStateOf {
             if(progress <= 1) progress else progress - 1
@@ -207,7 +190,24 @@ fun HomeScreen() {
             durationMillis = 250
         ), label = ""
     )
-
+    val startState by remember {
+        derivedStateOf {
+            if(progress <= 1 && animProgressB == 0f) {
+                cardState
+            } else {
+                halfExpandedState
+            }
+        }
+    }
+    val endState by remember {
+        derivedStateOf {
+            if(progress <= 1 && animProgressB == 0f) {
+                halfExpandedState
+            } else {
+                fullyExpandedState
+            }
+        }
+    }
     if(credData.cards.isNotEmpty()) {
         MotionLayout(
             start = startState,
