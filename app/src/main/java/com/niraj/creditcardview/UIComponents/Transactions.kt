@@ -134,6 +134,6 @@ fun Transactions(
 }
 
 fun currencyToSymbol(currency: String) : Char {
-    if(currency == "USD") return '$'
-    else return '₹'
+    return if(currency == "USD") '$'
+    else '₹'
 }

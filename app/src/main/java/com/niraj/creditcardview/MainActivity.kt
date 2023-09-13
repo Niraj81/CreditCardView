@@ -89,7 +89,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Main screen where I want to add all the animations using MutliStateMotionLayout and stuff
 @OptIn(ExperimentalMotionApi::class)
 @Composable
 fun HomeScreen() {
@@ -200,13 +199,13 @@ fun HomeScreen() {
         targetValue = min(1f, progress),
         animationSpec = TweenSpec(
             durationMillis = 250
-        )
+        ), label = ""
     )
     val animProgressB by animateFloatAsState(
         targetValue = max(0f, progress - 1),
         animationSpec = TweenSpec(
             durationMillis = 250
-        )
+        ), label = ""
     )
 
     if(credData.cards.isNotEmpty()) {
