@@ -1,6 +1,7 @@
 package com.niraj.creditcardview.UIComponents
 
 import android.util.Log
+import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -18,6 +19,9 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -29,13 +33,36 @@ import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layoutId
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.lang.Float.max
 import java.lang.Float.min
 
+
+@Composable
+fun EmptyCard(alpha: Float) {
+    Box (
+        modifier = Modifier.fillMaxSize(0.8f).alpha(alpha),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "No More Cards Available \n:(",
+            style = MaterialTheme.typography.displayMedium,
+            fontWeight = FontWeight.Black,
+            color = Color.DarkGray,
+            fontSize = 50.sp,
+            lineHeight = TextUnit(80f, TextUnitType.Sp)
+        )
+    }
+}
+
 @Composable
 fun CreditCard(
-    color: Color = Color.Cyan,
+    color: Color = Color.Black,
     borderColor: Color = Color.White,
     progress : Float,
     onDragStarted: (Int) -> Unit,
@@ -53,7 +80,7 @@ fun CreditCard(
     val rotation by animateFloatAsState(
         targetValue = min(1f, progress) * 90f,
         label = "",
-        animationSpec = TweenSpec (durationMillis = 250, easing = LinearOutSlowInEasing)
+        animationSpec = TweenSpec (durationMillis = 200, easing = FastOutLinearInEasing)
     )
 
     // Takes care of the input (only Vertical) - Horizontal is taken care by horizontal pager
@@ -83,7 +110,7 @@ fun CreditCard(
                 .aspectRatio(27 / 43f),
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 5.dp),
             border = BorderStroke(3.dp, borderColor),
-            shape = RoundedCornerShape(12.dp + 2.dp * (1 - currentProgress)),
+            shape = RoundedCornerShape(18.dp + 8.dp * (1 - currentProgress)),
             colors = CardDefaults.cardColors(containerColor = color)
         ) {
         }

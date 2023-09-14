@@ -101,7 +101,6 @@ fun HomeScreen() {
         mutableStateOf(ViewState.CardState)
     }
     var selectedCardName by remember { mutableStateOf("Nothing") }
-
     val maxDrag = -400f
     var dragDistance by remember {
         mutableStateOf(0f)
@@ -173,11 +172,6 @@ fun HomeScreen() {
         }
     }
 
-    val animProgress by remember {
-        derivedStateOf {
-            if(progress <= 1) progress else progress - 1
-        }
-    }
     val animProgressA by animateFloatAsState(
         targetValue = min(1f, progress),
         animationSpec = TweenSpec(

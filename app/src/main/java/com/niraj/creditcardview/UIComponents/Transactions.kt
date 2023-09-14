@@ -84,8 +84,9 @@ fun Transactions(
     val firstItemVisible by remember {derivedStateOf {
         state.firstVisibleItemIndex
     }}
+
     fun scrollItem(amount: Float) {
-        scope.launch (Dispatchers.IO){
+        scope.launch(Dispatchers.IO){
             state.animateScrollBy(
                 amount,
                 animationSpec = TweenSpec (
